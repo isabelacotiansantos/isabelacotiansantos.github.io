@@ -7,26 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
   /* =========================================
-     TEMA CLARO / ESCURO
-  ========================================= */
-  const root = document.documentElement;
-  const themeToggle = document.getElementById('themeToggle');
-  const savedTheme = localStorage.getItem('theme');
-
-  if (savedTheme) {
-    root.setAttribute('data-theme', savedTheme);
-  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-    root.setAttribute('data-theme', 'light');
-  }
-
-  themeToggle.addEventListener('click', () => {
-    const current = root.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-  });
-
-  /* =========================================
      MENU MOBILE
   ========================================= */
   const menuToggle = document.getElementById('menuToggle');

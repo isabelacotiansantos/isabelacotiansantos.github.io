@@ -13,9 +13,7 @@
 
   --radius: 16px;
   --transition: 0.35s cubic-bezier(.4,0,.2,1);
-}
 
-html[data-theme="dark"] {
   --bg: #000000;
   --bg-alt: #0a0a0a;
   --card-bg: rgba(255,255,255,0.04);
@@ -25,18 +23,6 @@ html[data-theme="dark"] {
   --nav-bg: rgba(0, 0, 0, 0.6);
   --shadow: 0 20px 60px rgba(220,38,38,0.25);
   --input-bg: rgba(255,255,255,0.06);
-}
-
-html[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-alt: #f5f5f5;
-  --card-bg: #ffffff;
-  --card-border: rgba(185,28,28,0.18);
-  --text: #0d0d0d;
-  --text-muted: #4a4a4a;
-  --nav-bg: rgba(255, 255, 255, 0.7);
-  --shadow: 0 20px 50px rgba(185,28,28,0.15);
-  --input-bg: #ffffff;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -78,7 +64,6 @@ img { max-width: 100%; display: block; }
   animation: float 18s ease-in-out infinite;
 }
 
-html[data-theme="light"] .blob { opacity: 0.25; }
 
 .blob-1 {
   width: 420px; height: 420px;
@@ -192,24 +177,6 @@ html[data-theme="light"] .blob { opacity: 0.25; }
 
 .nav-actions { display: flex; align-items: center; gap: 14px; }
 
-.icon-btn {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: var(--text);
-  width: 42px; height: 42px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: transform var(--transition), background var(--transition);
-}
-.icon-btn:hover { transform: rotate(20deg) scale(1.08); background: var(--primary); color: #fff; }
-
-.icon-btn svg { width: 20px; height: 20px; }
-.icon-sun, .icon-moon { position: absolute; }
-html[data-theme="dark"] .icon-sun { display: none; }
-html[data-theme="light"] .icon-moon { display: none; }
-.icon-btn { position: relative; }
-
 .menu-toggle {
   display: none;
   flex-direction: column;
@@ -267,7 +234,6 @@ html[data-theme="light"] .icon-moon { display: none; }
   animation: heroFloat 16s ease-in-out infinite;
 }
 
-html[data-theme="light"] .hero-illustration { opacity: 0.1; }
 
 .hero-illustration-1 { width: 170px; top: 10%; left: 5%; animation-delay: 0s; }
 .hero-illustration-2 { width: 230px; top: 14%; right: 4%; animation-delay: -4s; }
