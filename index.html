@@ -1,310 +1,837 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Isabela Cotian | Compras & Suprimentos - Katispera Agropecuária</title>
-<meta name="description" content="Página pessoal de Isabela Cotian, profissional de Compras na Katispera Agropecuária.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<title>CowSugar · Dashboard de Mercado Bovino</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root{
+  --green:#4a5d3a; --green-2:#5f7a45; --green-3:#7d9b5a; --green-glow:#9bc46a;
+  --gray:#6b7280; --gray-2:#9aa0a6;
+  --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.25);
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#12150f; --bg-2:#171b12; --panel:#1e2418; --panel-2:#252d1c;
+  --border:#333d28; --text:#e9ede1; --text-dim:#a7b096; --accent:#8fae5f;
+  --map-empty:#2a3220; --map-hi:#9bc46a; --grid:rgba(255,255,255,.06);
+}
+html[data-theme="light"]{
+  --bg:#e9ece4; --bg-2:#dfe3d8; --panel:#ffffff; --panel-2:#f3f5ee;
+  --border:#d3d8c8; --text:#26301d; --text-dim:#5c6650; --accent:#4a5d3a;
+  --map-empty:#d8ddcb; --map-hi:#4a5d3a; --grid:rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);transition:background .4s,color .4s;}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* ---------- LOGIN ---------- */
+#login{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(1200px 600px at 70% 20%,#2c3a22,#12150f 70%);overflow:hidden}
+#login-particles{position:absolute;inset:0}
+.login-card{position:relative;z-index:2;width:min(380px,90vw);background:rgba(24,29,18,.82);
+  backdrop-filter:blur(12px);border:1px solid #3a462c;border-radius:20px;padding:38px 34px;
+  box-shadow:0 20px 60px rgba(0,0,0,.55);animation:pop .6s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes pop{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.brand .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--green-3),var(--green));
+  display:grid;place-items:center;font-size:26px;box-shadow:0 6px 18px rgba(123,155,90,.4)}
+.brand h1{margin:0;font-size:22px;letter-spacing:.5px;color:#eef2e6}
+.brand h1 span{color:var(--green-glow)}
+.login-sub{color:#9aa88a;font-size:13px;margin:2px 0 26px 2px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;color:#9aa88a;margin-bottom:6px;letter-spacing:.4px}
+.field input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #3d4a2d;background:#141810;
+  color:#eef2e6;font-size:15px;outline:none;transition:border .2s,box-shadow .2s}
+.field input:focus{border-color:var(--green-3);box-shadow:0 0 0 3px rgba(123,155,90,.2)}
+.login-btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:.5px;
+  color:#0e1209;background:linear-gradient(135deg,var(--green-glow),var(--green-2));margin-top:8px;
+  transition:transform .15s,filter .2s}
+.login-btn:hover{filter:brightness(1.08)}
+.login-btn:active{transform:scale(.98)}
+.login-err{color:#e77;font-size:13px;min-height:18px;margin-top:12px;text-align:center;opacity:0;transition:opacity .2s}
+.login-err.show{opacity:1;animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.login-hint{margin-top:18px;text-align:center;font-size:11px;color:#6f7a5c}
+
+/* ---------- FADE-IN TRANSITION ---------- */
+#burst{position:fixed;inset:0;z-index:60;pointer-events:none}
+#app{opacity:0;transition:opacity 1.1s ease}
+#app.reveal{opacity:1}
+
+/* ---------- APP ---------- */
+header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;
+  padding:14px 26px;background:linear-gradient(180deg,var(--bg-2),transparent);
+  border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}
+header .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--green-3),var(--green));
+  display:grid;place-items:center;font-size:22px}
+header .title{font-size:18px;font-weight:700;letter-spacing:.4px}
+header .title span{color:var(--accent)}
+header .spacer{flex:1}
+.update-badge{font-size:12px;color:var(--text-dim);background:var(--panel);border:1px solid var(--border);
+  padding:7px 12px;border-radius:20px;display:flex;align-items:center;gap:7px}
+.update-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green-glow);box-shadow:0 0 8px var(--green-glow);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.35}}
+.icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--panel);
+  color:var(--text);font-size:16px;display:grid;place-items:center;transition:background .2s,transform .15s}
+.icon-btn:hover{background:var(--panel-2)}
+.icon-btn:active{transform:scale(.92)}
+
+main{padding:22px 26px 60px;max-width:1440px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+.panel h2{margin:0 0 4px;font-size:15px;letter-spacing:.3px}
+.panel .desc{margin:0 0 14px;font-size:12px;color:var(--text-dim)}
+.grid{display:grid;gap:18px}
+
+/* KPIs */
+.kpis{grid-template-columns:repeat(4,1fr);margin-bottom:18px}
+.kpi{position:relative;overflow:hidden}
+.kpi .label{font-size:12px;color:var(--text-dim);letter-spacing:.4px}
+.kpi .value{font-size:26px;font-weight:800;margin-top:6px;letter-spacing:.3px}
+.kpi .value small{font-size:14px;font-weight:600;color:var(--text-dim)}
+.kpi .trend{font-size:12px;margin-top:4px}
+.kpi .accent-bar{position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(var(--green-glow),var(--green))}
+.up{color:#7fbf6a}.down{color:#e08a6a}
+
+/* HERO MAP */
+.hero{margin-bottom:18px}
+.hero-head{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:8px}
+.hero-head h2{margin:0;font-size:17px}
+.map-controls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.seg button{padding:8px 14px;border:none;background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;transition:all .2s}
+.seg button.active{background:linear-gradient(135deg,var(--green-2),var(--green));color:#fff}
+.toggle-flow{padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel-2);color:var(--text-dim);font-size:13px;font-weight:600}
+.toggle-flow.active{background:linear-gradient(135deg,var(--green-2),var(--green));color:#fff;border-color:transparent}
+#map-wrap{position:relative;width:100%;height:520px;border-radius:12px;overflow:hidden;background:radial-gradient(900px 500px at 60% 30%,var(--panel-2),var(--panel))}
+#map{width:100%;height:100%;display:block}
+.country{stroke:var(--border);stroke-width:.4px;transition:fill .3s,opacity .3s}
+.country:hover{stroke:var(--green-glow);stroke-width:1.1px;cursor:pointer}
+.bubble{pointer-events:none}
+.flow{fill:none;stroke:var(--green-glow);stroke-width:1.4;opacity:.55;stroke-dasharray:5 7}
+.legend-box{position:absolute;left:16px;bottom:16px;background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;font-size:11px;color:var(--text-dim)}
+.legend-grad{width:150px;height:10px;border-radius:5px;margin:6px 0 3px}
+.legend-labels{display:flex;justify-content:space-between}
+.map-status{position:absolute;inset:0;display:grid;place-items:center;color:var(--text-dim);font-size:13px;text-align:center;padding:20px}
+#tooltip{position:fixed;z-index:40;pointer-events:none;background:var(--panel);border:1px solid var(--green-3);
+  border-radius:10px;padding:11px 13px;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,.4);opacity:0;transition:opacity .12s;min-width:190px}
+#tooltip h4{margin:0 0 8px;font-size:14px;color:var(--accent);display:flex;align-items:center;gap:7px}
+#tooltip .row{display:flex;justify-content:space-between;gap:16px;margin:3px 0}
+#tooltip .row span:last-child{font-weight:700}
+#tooltip .net{border-top:1px solid var(--border);margin-top:7px;padding-top:6px}
+
+/* controls / filters */
+.controls{grid-template-columns:2fr 1fr;margin-bottom:18px}
+.range-wrap{margin-top:10px}
+.range-labels{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px}
+.dual{position:relative;height:34px}
+.dual input[type=range]{position:absolute;left:0;right:0;top:8px;width:100%;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;margin:0}
+.dual input[type=range]::-webkit-slider-runnable-track{height:6px;background:transparent}
+.dual input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:all;width:20px;height:20px;border-radius:50%;
+  background:var(--green-glow);border:3px solid var(--panel);box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer;margin-top:-7px}
+.dual input[type=range]::-moz-range-thumb{pointer-events:all;width:20px;height:20px;border-radius:50%;background:var(--green-glow);border:3px solid var(--panel);cursor:pointer}
+.dual .track{position:absolute;left:0;right:0;top:11px;height:6px;border-radius:3px;background:var(--panel-2)}
+.dual .track-fill{position:absolute;top:11px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--green-2),var(--green-glow))}
+.years{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.year-chip{padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--panel-2);color:var(--text-dim);font-size:13px;font-weight:600;transition:all .2s}
+.year-chip.active{background:linear-gradient(135deg,var(--green-2),var(--green));color:#fff;border-color:transparent}
+
+/* insights layout */
+.insights{grid-template-columns:1fr 1fr;margin-bottom:18px}
+.tops{grid-template-columns:1fr 1fr;margin-bottom:18px}
+.chart-box{position:relative;height:300px}
+.corr-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;background:var(--panel-2);border:1px solid var(--border);
+  padding:6px 12px;border-radius:20px;font-weight:700}
+.corr-badge b{color:var(--accent);font-size:16px}
+.rank{list-style:none;margin:6px 0 0;padding:0}
+.rank li{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;background:var(--panel-2);margin-bottom:9px;border:1px solid var(--border)}
+.rank .pos{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#fff;
+  background:linear-gradient(135deg,var(--green-2),var(--green))}
+.rank .flag{font-size:22px}
+.rank .who{flex:1;font-weight:700}
+.rank .who small{display:block;font-weight:500;color:var(--text-dim);font-size:11px}
+.rank .vol{font-weight:800;color:var(--accent)}
+.rank .vol small{color:var(--text-dim);font-weight:500}
+.full{grid-column:1/-1}
+footer{text-align:center;color:var(--text-dim);font-size:12px;padding:20px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.insights,.tops,.controls{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 
-<div class="bg-blobs" aria-hidden="true">
-  <span class="blob blob-1"></span>
-  <span class="blob blob-2"></span>
-  <span class="blob blob-3"></span>
+<!-- ================= LOGIN ================= -->
+<div id="login">
+  <canvas id="login-particles"></canvas>
+  <form class="login-card" id="login-form" autocomplete="off">
+    <div class="brand"><div class="logo">🐂</div><h1>Cow<span>Sugar</span></h1></div>
+    <div class="login-sub">Inteligência de Mercado Bovino</div>
+    <div class="field"><label>Usuário</label><input id="user" type="text" placeholder="usuário" autocomplete="off"></div>
+    <div class="field"><label>Senha</label><input id="pass" type="password" placeholder="••••••" autocomplete="off"></div>
+    <button class="login-btn" type="submit">ENTRAR</button>
+    <div class="login-err" id="login-err">Usuário ou senha inválidos</div>
+    <div class="login-hint">Acesso restrito · CowSugar © 2026</div>
+  </form>
 </div>
 
-<div class="progress-bar" id="progressBar"></div>
+<canvas id="burst" class="hidden"></canvas>
 
-<header class="navbar" id="navbar">
-  <div class="nav-container">
-    <a href="#home" class="logo">Isabela<span>.</span></a>
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="logo">🐂</div>
+    <div class="title">Cow<span>Sugar</span> · Mercado Bovino</div>
+    <div class="spacer"></div>
+    <div class="update-badge"><span class="dot"></span> Última atualização: <b id="last-update">—</b></div>
+    <button class="icon-btn" id="theme-btn" title="Alternar tema">🌙</button>
+    <button class="icon-btn" id="logout-btn" title="Sair">⏻</button>
+  </header>
 
-    <nav class="nav-menu" id="navMenu">
-      <ul class="nav-links">
-        <li><a href="#home" class="nav-link active">Início</a></li>
-        <li><a href="#sobre" class="nav-link">Sobre</a></li>
-        <li><a href="#experiencia" class="nav-link">Experiência</a></li>
-        <li><a href="#newsletter" class="nav-link">Newsletter</a></li>
-        <li><a href="#contato" class="nav-link">Contato</a></li>
-      </ul>
-    </nav>
+  <main>
+    <!-- KPIs -->
+    <section class="grid kpis">
+      <div class="panel kpi"><div class="accent-bar"></div><div class="label">ARROBA DO BOI (última)</div><div class="value" id="kpi-arroba">—</div><div class="trend" id="kpi-arroba-t"></div></div>
+      <div class="panel kpi"><div class="accent-bar"></div><div class="label">DÓLAR (última)</div><div class="value" id="kpi-dolar">—</div><div class="trend" id="kpi-dolar-t"></div></div>
+      <div class="panel kpi"><div class="accent-bar"></div><div class="label">CORRELAÇÃO (Pearson)</div><div class="value" id="kpi-corr">—</div><div class="trend" id="kpi-corr-t"></div></div>
+      <div class="panel kpi"><div class="accent-bar"></div><div class="label">PREVISÃO PRÓX. MÊS</div><div class="value" id="kpi-fc">—</div><div class="trend" id="kpi-fc-t"></div></div>
+    </section>
 
-    <div class="nav-actions">
-      <button id="menuToggle" class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </div>
-</header>
-
-<main>
-
-  <!-- HERO -->
-  <section id="home" class="hero">
-    <div class="hero-illustrations" aria-hidden="true">
-      <svg class="hero-illustration hero-illustration-1" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
-        <path d="M62 80 L138 80 L150 190 Q150 202 138 202 L62 202 Q50 202 50 190 Z" fill="#e8e8e8"/>
-        <rect x="68" y="60" width="64" height="24" rx="8" fill="#dc2626"/>
-        <rect x="60" y="120" width="80" height="34" rx="6" fill="#dc2626"/>
-        <text x="100" y="143" font-family="Poppins, sans-serif" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">NPK</text>
-        <circle cx="35" cy="70" r="5" fill="#dc2626"/>
-        <circle cx="25" cy="95" r="3.5" fill="#dc2626"/>
-        <circle cx="165" cy="75" r="5" fill="#dc2626"/>
-        <path d="M100 60 C96 40 104 25 100 8" stroke="#4ade80" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <path d="M100 30 C88 24 82 14 88 6" stroke="#4ade80" stroke-width="4" fill="none" stroke-linecap="round"/>
-        <path d="M100 22 C112 16 118 6 112 2" stroke="#4ade80" stroke-width="4" fill="none" stroke-linecap="round"/>
-      </svg>
-
-      <svg class="hero-illustration hero-illustration-2" viewBox="0 0 260 180" xmlns="http://www.w3.org/2000/svg">
-        <path d="M40 140 L60 100 L150 100 L165 70 L210 70 L215 100 L230 100 L230 135 Z" fill="#e8e8e8"/>
-        <path d="M150 100 L150 55 L190 55 L190 100 Z" fill="#dc2626"/>
-        <rect x="158" y="62" width="24" height="24" rx="3" fill="#111"/>
-        <rect x="120" y="45" width="10" height="35" rx="3" fill="#333"/>
-        <circle cx="190" cy="140" r="40" fill="#1a1a1a"/>
-        <circle cx="190" cy="140" r="22" fill="#dc2626"/>
-        <circle cx="190" cy="140" r="6" fill="#1a1a1a"/>
-        <circle cx="70" cy="145" r="24" fill="#1a1a1a"/>
-        <circle cx="70" cy="145" r="12" fill="#dc2626"/>
-      </svg>
-
-      <svg class="hero-illustration hero-illustration-3" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg">
-        <rect x="90" y="70" width="140" height="60" rx="10" fill="#e8e8e8"/>
-        <rect x="120" y="35" width="80" height="40" rx="8" fill="#dc2626"/>
-        <rect x="200" y="55" width="34" height="45" rx="6" fill="#1a1a1a"/>
-        <rect x="207" y="62" width="20" height="20" rx="3" fill="#87ceeb" opacity="0.4"/>
-        <path d="M30 100 L90 100 L90 130 L30 130 Z" fill="#dc2626"/>
-        <line x1="35" y1="100" x2="35" y2="130" stroke="#1a1a1a" stroke-width="3"/>
-        <line x1="48" y1="100" x2="48" y2="130" stroke="#1a1a1a" stroke-width="3"/>
-        <line x1="61" y1="100" x2="61" y2="130" stroke="#1a1a1a" stroke-width="3"/>
-        <line x1="74" y1="100" x2="74" y2="130" stroke="#1a1a1a" stroke-width="3"/>
-        <circle cx="110" cy="140" r="36" fill="#1a1a1a"/>
-        <circle cx="110" cy="140" r="18" fill="#dc2626"/>
-        <circle cx="205" cy="140" r="24" fill="#1a1a1a"/>
-        <circle cx="205" cy="140" r="12" fill="#dc2626"/>
-      </svg>
-
-      <svg class="hero-illustration hero-illustration-4" viewBox="0 0 240 180" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="120" cy="110" rx="75" ry="42" fill="#e8e8e8"/>
-        <ellipse cx="205" cy="95" rx="28" ry="24" fill="#e8e8e8"/>
-        <ellipse cx="188" cy="72" rx="10" ry="6" fill="#e8e8e8" transform="rotate(-20 188 72)"/>
-        <ellipse cx="222" cy="72" rx="10" ry="6" fill="#e8e8e8" transform="rotate(20 222 72)"/>
-        <path d="M195 75 Q190 60 200 55" stroke="#d4d4d4" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <path d="M215 75 Q220 60 210 55" stroke="#d4d4d4" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <ellipse cx="228" cy="108" rx="12" ry="9" fill="#dc2626"/>
-        <circle cx="224" cy="106" r="1.5" fill="#1a1a1a"/>
-        <circle cx="232" cy="106" r="1.5" fill="#1a1a1a"/>
-        <circle cx="208" cy="88" r="3" fill="#1a1a1a"/>
-        <ellipse cx="90" cy="90" rx="18" ry="14" fill="#dc2626" opacity="0.85"/>
-        <ellipse cx="140" cy="125" rx="22" ry="16" fill="#dc2626" opacity="0.85"/>
-        <ellipse cx="60" cy="120" rx="14" ry="10" fill="#dc2626" opacity="0.85"/>
-        <rect x="70" y="140" width="14" height="34" rx="6" fill="#d4d4d4"/>
-        <rect x="105" y="145" width="14" height="30" rx="6" fill="#d4d4d4"/>
-        <rect x="150" y="145" width="14" height="30" rx="6" fill="#d4d4d4"/>
-        <rect x="180" y="140" width="14" height="34" rx="6" fill="#d4d4d4"/>
-        <path d="M48 100 Q30 110 35 140" stroke="#d4d4d4" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <circle cx="35" cy="142" r="6" fill="#1a1a1a"/>
-      </svg>
-    </div>
-
-    <div class="hero-content">
-      <p class="hero-greeting reveal" data-delay="0">Olá, seja bem-vindo(a) 👋</p>
-      <h1 class="hero-name reveal" data-delay="100">Isabela Cotian</h1>
-      <h2 class="hero-role reveal" data-delay="200">
-        Setor de <span class="gradient-text">Compras</span>
-        <span class="divider">•</span>
-        <span class="brand">Katispera Agropecuária</span>
-      </h2>
-      <p class="hero-desc reveal" data-delay="300">
-        Atuo no setor de compras, realizando a autorização de pagamentos das
-        compras efetuadas nas fazendas da empresa em Goiás, garantindo
-        conferência, controle e agilidade em cada processo.
-      </p>
-      <div class="hero-buttons reveal" data-delay="400">
-        <a href="#contato" class="btn btn-primary">Fale comigo</a>
-        <a href="#sobre" class="btn btn-outline">Saiba mais</a>
-      </div>
-    </div>
-
-    <a href="#sobre" class="scroll-indicator" aria-label="Rolar para baixo">
-      <span></span>
-    </a>
-  </section>
-
-  <!-- SOBRE -->
-  <section id="sobre" class="section about">
-    <div class="section-header">
-      <p class="eyebrow reveal">Sobre mim</p>
-      <h2 class="section-title reveal">Quem sou eu</h2>
-    </div>
-
-    <div class="about-grid">
-      <div class="about-text reveal">
-        <p>
-          Sou profissional da área de <strong>Compras</strong> na
-          <strong>Katispera Agropecuária</strong>, responsável pela
-          <strong>autorização de pagamentos</strong> das compras realizadas
-          nas fazendas da empresa em <strong>Goiás</strong>, cuidando da
-          conferência de notas, prazos e valores antes da liberação.
-        </p>
-        <p>
-          Gosto de otimizar processos, manter o controle financeiro das
-          operações de compra e garantir que cada fazenda receba seus
-          insumos e pagamentos sem atrasos ou falhas de conferência.
-        </p>
-      </div>
-
-      <div class="about-stats">
-        <div class="stat-card reveal" data-delay="0">
-          <span class="stat-number" data-count="120">0</span><span class="stat-plus">+</span>
-          <p>Fornecedores gerenciados</p>
-        </div>
-        <div class="stat-card reveal" data-delay="100">
-          <span class="stat-number" data-count="98">0</span><span class="stat-plus">%</span>
-          <p>Entregas dentro do prazo</p>
-        </div>
-        <div class="stat-card reveal" data-delay="200">
-          <span class="stat-number" data-count="15">0</span><span class="stat-plus">+</span>
-          <p>Fazendas atendidas em Goiás</p>
+    <!-- HERO MAP -->
+    <section class="panel hero">
+      <div class="hero-head">
+        <h2>🌍 Comércio Global de Bovinos</h2>
+        <div class="map-controls">
+          <div class="seg" id="metric-seg">
+            <button class="active" data-metric="exp">Exportações</button>
+            <button data-metric="imp">Importações</button>
+          </div>
+          <button class="toggle-flow active" id="flow-btn">Fluxo de mercado ✦</button>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- EXPERIÊNCIA / HABILIDADES -->
-  <section id="experiencia" class="section experience">
-    <div class="section-header">
-      <p class="eyebrow reveal">O que eu faço</p>
-      <h2 class="section-title reveal">Experiência & Habilidades</h2>
-    </div>
-
-    <div class="cards-grid">
-      <div class="card reveal" data-delay="0">
-        <div class="card-icon">✅</div>
-        <h3>Autorização de Pagamentos</h3>
-        <p>Conferência e liberação dos pagamentos das compras realizadas nas fazendas em Goiás, com foco em segurança e prazo.</p>
-      </div>
-      <div class="card reveal" data-delay="100">
-        <div class="card-icon">🧾</div>
-        <h3>Conferência de Notas</h3>
-        <p>Validação de notas fiscais, valores e condições acordadas antes da aprovação financeira.</p>
-      </div>
-      <div class="card reveal" data-delay="200">
-        <div class="card-icon">🤝</div>
-        <h3>Negociação</h3>
-        <p>Condução de negociações com fornecedores buscando o melhor custo-benefício sem abrir mão da qualidade.</p>
-      </div>
-      <div class="card reveal" data-delay="300">
-        <div class="card-icon">📊</div>
-        <h3>Análise de Custos</h3>
-        <p>Acompanhamento de indicadores e cotações para tomada de decisão baseada em dados.</p>
-      </div>
-      <div class="card reveal" data-delay="400">
-        <div class="card-icon">🌾</div>
-        <h3>Fazendas em Goiás</h3>
-        <p>Acompanhamento das compras e pagamentos das unidades rurais da empresa espalhadas pelo estado de Goiás.</p>
-      </div>
-      <div class="card reveal" data-delay="500">
-        <div class="card-icon">💬</div>
-        <h3>Relacionamento</h3>
-        <p>Construção de parcerias duradouras com fornecedores e equipes internas.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- NEWSLETTER -->
-  <section id="newsletter" class="section newsletter">
-    <div class="newsletter-box reveal">
-      <div class="newsletter-icon">✉️</div>
-      <h2>Assine minha newsletter</h2>
-      <p>Receba novidades sobre o setor de compras e agronegócio direto no seu e-mail.</p>
-
-      <form id="newsletterForm" class="newsletter-form" novalidate>
-        <div class="input-group">
-          <input type="email" id="newsletterEmail" placeholder="Seu melhor e-mail" required>
-          <button type="submit" class="btn btn-primary">
-            <span class="btn-text">Inscrever-se</span>
-          </button>
+      <p class="desc">Mapa coroplético por país. Passe o mouse para detalhes. As bolhas pulsantes representam o volume de mercado; as linhas mostram os fluxos comerciais dos maiores exportadores.</p>
+      <div id="map-wrap">
+        <svg id="map"></svg>
+        <div class="legend-box">
+          <div id="legend-title">Volume de exportação (mil t)</div>
+          <div class="legend-grad" id="legend-grad"></div>
+          <div class="legend-labels"><span id="leg-min">0</span><span id="leg-max">—</span></div>
         </div>
-        <p class="form-message" id="newsletterMessage" role="status"></p>
-      </form>
-    </div>
-  </section>
+        <div class="map-status hidden" id="map-status"></div>
+      </div>
+    </section>
 
-  <!-- CONTATO -->
-  <section id="contato" class="section contact">
-    <div class="section-header">
-      <p class="eyebrow reveal">Vamos conversar</p>
-      <h2 class="section-title reveal">Contato</h2>
-    </div>
-
-    <div class="contact-grid">
-      <div class="contact-info reveal">
-        <div class="contact-item">
-          <span class="contact-icon">📧</span>
-          <div>
-            <h4>E-mail</h4>
-            <a href="mailto:isabela.santos@katispera.com.br">isabela.santos@katispera.com.br</a>
+    <!-- FILTERS -->
+    <section class="grid controls">
+      <div class="panel">
+        <h2>🗓️ Segmentação de período</h2>
+        <p class="desc">Selecione o intervalo de datas que alimenta os insights de correlação, regressão e MoM.</p>
+        <div class="range-wrap">
+          <div class="range-labels"><span id="r-start">—</span><span id="r-end">—</span></div>
+          <div class="dual" id="dual">
+            <div class="track"></div><div class="track-fill" id="track-fill"></div>
+            <input type="range" id="r-min"><input type="range" id="r-max">
           </div>
         </div>
-        <div class="contact-item">
-          <span class="contact-icon">🏢</span>
-          <div>
-            <h4>Empresa</h4>
-            <p>Katispera Agropecuária</p>
-          </div>
-        </div>
-        <div class="contact-item">
-          <span class="contact-icon">💼</span>
-          <div>
-            <h4>Área</h4>
-            <p>Compras — Autorização de Pagamentos</p>
-          </div>
-        </div>
-        <div class="social-links">
-          <a href="#" class="social-btn" aria-label="LinkedIn">in</a>
-          <a href="#" class="social-btn" aria-label="Instagram">ig</a>
-          <a href="#" class="social-btn" aria-label="WhatsApp">wa</a>
-        </div>
       </div>
+      <div class="panel">
+        <h2>📅 Anos no gráfico MoM</h2>
+        <p class="desc">Escolha os anos exibidos no gráfico composto Mês-sobre-Mês.</p>
+        <div class="years" id="year-chips"></div>
+      </div>
+    </section>
 
-      <form id="contactForm" class="contact-form reveal" novalidate>
-        <div class="form-row">
-          <div class="form-field">
-            <input type="text" id="contactName" placeholder=" " required>
-            <label for="contactName">Nome</label>
-          </div>
-          <div class="form-field">
-            <input type="email" id="contactEmail" placeholder=" " required>
-            <label for="contactEmail">E-mail</label>
-          </div>
-        </div>
-        <div class="form-field">
-          <input type="text" id="contactSubject" placeholder=" ">
-          <label for="contactSubject">Assunto</label>
-        </div>
-        <div class="form-field">
-          <textarea id="contactText" rows="5" placeholder=" " required></textarea>
-          <label for="contactText">Mensagem</label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Enviar mensagem</button>
-        <p class="form-message" id="contactMessage" role="status"></p>
-      </form>
-    </div>
-  </section>
+    <!-- INSIGHTS: correlation + regression -->
+    <section class="grid insights">
+      <div class="panel">
+        <h2>🔗 Correlação Dólar × Arroba</h2>
+        <p class="desc">Dispersão e reta de tendência no período selecionado. <span class="corr-badge">r = <b id="corr-val">—</b></span> <span id="corr-txt" style="font-size:12px;color:var(--text-dim)"></span></p>
+        <div class="chart-box"><canvas id="corrChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>📈 Regressão Linear · Previsão de mercado</h2>
+        <p class="desc">Tendência da arroba e projeção linear para os próximos 6 meses.</p>
+        <div class="chart-box"><canvas id="regChart"></canvas></div>
+      </div>
+    </section>
 
-</main>
+    <!-- TOP 3 -->
+    <section class="grid tops">
+      <div class="panel">
+        <h2>🏆 Top 3 Exportadores</h2>
+        <p class="desc">Maiores exportadores de carne bovina (volume anual estimado).</p>
+        <ul class="rank" id="top-exp"></ul>
+      </div>
+      <div class="panel">
+        <h2>🏆 Top 3 Importadores</h2>
+        <p class="desc">Maiores importadores de carne bovina (volume anual estimado).</p>
+        <ul class="rank" id="top-imp"></ul>
+      </div>
+    </section>
 
-<footer class="footer">
-  <p>&copy; <span id="year"></span> Isabela Cotian — Katispera Agropecuária. Todos os direitos reservados.</p>
-  <button id="backToTop" class="back-to-top" aria-label="Voltar ao topo">↑</button>
-</footer>
+    <!-- MoM composed -->
+    <section class="panel full">
+      <h2>📊 MoM — Mês sobre Mês (gráfico composto)</h2>
+      <p class="desc">Barras: cotação da arroba por mês. Linha: variação percentual mês-a-mês (%). Filtre por ano acima.</p>
+      <div class="chart-box" style="height:340px"><canvas id="momChart"></canvas></div>
+    </section>
 
-<div class="toast" id="toast"></div>
+    <footer>CowSugar · Dashboard construído sobre dados de cotação (arroba &amp; dólar) e comércio internacional de bovinos. Dados de comércio ilustrativos.</footer>
+  </main>
+</div>
 
-<script src="js/script.js"></script>
+<div id="tooltip"></div>
+
+<script>
+/* =========================================================================
+   DADOS EMBUTIDOS (fallback). O dashboard tenta carregar os CSVs da pasta;
+   se o navegador bloquear (file://), usa estes valores idênticos.
+   ========================================================================= */
+const EMBED = {
+  arroba:`Data,Cotacao
+01/01/2023,220.32
+01/02/2023,231.58
+01/03/2023,236.87
+01/04/2023,234.13
+01/05/2023,238.14
+01/06/2023,256.28
+01/07/2023,259.92
+01/08/2023,256.78
+01/09/2023,268.58
+01/10/2023,276.64
+01/11/2023,269.62
+01/12/2023,271.77
+01/01/2024,286.43
+01/02/2024,276.57
+01/03/2024,282.17
+01/04/2024,275.69
+01/05/2024,285.87
+01/06/2024,280.60
+01/07/2024,279.11
+01/08/2024,282.91
+01/09/2024,285.58
+01/10/2024,276.28
+01/11/2024,277.80
+01/12/2024,272.87
+01/01/2025,273.11
+01/02/2025,269.14
+01/03/2025,263.40
+01/04/2025,269.76
+01/05/2025,270.36
+01/06/2025,272.38
+01/07/2025,273.30
+01/08/2025,265.31
+01/09/2025,263.80
+01/10/2025,281.86
+01/11/2025,277.01
+01/12/2025,273.61
+01/01/2026,269.69
+01/02/2026,277.79
+01/03/2026,292.69
+01/04/2026,286.97
+01/05/2026,293.96
+01/06/2026,290.04
+01/07/2026,288.99`,
+  dolar:`Data,Cotacao
+01/01/2023,4.9099
+01/02/2023,4.9876
+01/03/2023,5.0052
+01/04/2023,5.0128
+01/05/2023,4.9893
+01/06/2023,5.0481
+01/07/2023,5.1255
+01/08/2023,5.1062
+01/09/2023,5.0934
+01/10/2023,5.1963
+01/11/2023,5.1570
+01/12/2023,5.2075
+01/01/2024,5.1974
+01/02/2024,5.1966
+01/03/2024,5.1309
+01/04/2024,5.0839
+01/05/2024,5.1216
+01/06/2024,5.0750
+01/07/2024,5.0225
+01/08/2024,5.0676
+01/09/2024,5.0641
+01/10/2024,5.0569
+01/11/2024,5.0407
+01/12/2024,5.0338
+01/01/2025,5.0115
+01/02/2025,4.9017
+01/03/2025,4.8964
+01/04/2025,5.0039
+01/05/2025,4.9334
+01/06/2025,4.9900
+01/07/2025,5.0113
+01/08/2025,5.0062
+01/09/2025,4.9859
+01/10/2025,5.0875
+01/11/2025,5.0377
+01/12/2025,5.0683
+01/01/2026,5.0854
+01/02/2026,5.1312
+01/03/2026,5.2164
+01/04/2026,5.2400
+01/05/2026,5.2690
+01/06/2026,5.3121
+01/07/2026,5.1430`,
+  dolarDaily:`Data,Cotacao Compra,Cotacao Venda
+06/07/2026,5.16640,5.16700
+07/07/2026,5.14520,5.14580
+08/07/2026,5.15460,5.15520
+09/07/2026,5.13230,5.13290
+10/07/2026,5.10820,5.10880`
+};
+
+/* Comércio internacional de bovinos (ilustrativo). Chave = ISO 3166-1 numérico.
+   vol em mil toneladas/ano; valor em US$ milhões. */
+const TRADE = {
+  76:{name:"Brasil",flag:"🇧🇷",exp:3200,imp:35},
+  36:{name:"Austrália",flag:"🇦🇺",exp:1620,imp:20},
+  840:{name:"Estados Unidos",flag:"🇺🇸",exp:1310,imp:1520},
+  356:{name:"Índia",flag:"🇮🇳",exp:1540,imp:5},
+  32:{name:"Argentina",flag:"🇦🇷",exp:915,imp:12},
+  554:{name:"Nova Zelândia",flag:"🇳🇿",exp:660,imp:8},
+  858:{name:"Uruguai",flag:"🇺🇾",exp:525,imp:6},
+  124:{name:"Canadá",flag:"🇨🇦",exp:505,imp:230},
+  600:{name:"Paraguai",flag:"🇵🇾",exp:430,imp:4},
+  616:{name:"Polônia",flag:"🇵🇱",exp:455,imp:110},
+  528:{name:"Países Baixos",flag:"🇳🇱",exp:710,imp:405},
+  156:{name:"China",flag:"🇨🇳",exp:70,imp:3550},
+  392:{name:"Japão",flag:"🇯🇵",exp:40,imp:850},
+  410:{name:"Coreia do Sul",flag:"🇰🇷",exp:15,imp:660},
+  818:{name:"Egito",flag:"🇪🇬",exp:10,imp:355},
+  152:{name:"Chile",flag:"🇨🇱",exp:30,imp:335},
+  344:{name:"Hong Kong",flag:"🇭🇰",exp:60,imp:485},
+  643:{name:"Rússia",flag:"🇷🇺",exp:70,imp:305},
+  608:{name:"Filipinas",flag:"🇵🇭",exp:5,imp:285},
+  360:{name:"Indonésia",flag:"🇮🇩",exp:8,imp:255},
+  380:{name:"Itália",flag:"🇮🇹",exp:180,imp:385},
+  826:{name:"Reino Unido",flag:"🇬🇧",exp:130,imp:355},
+  682:{name:"Arábia Saudita",flag:"🇸🇦",exp:5,imp:265},
+  484:{name:"México",flag:"🇲🇽",exp:395,imp:245}
+};
+const PRICE={exp:4.6,imp:5.1}; // US$ mil / tonelada -> valor = vol*price (US$ M)
+
+/* ===================== LOGIN + PARTÍCULAS ===================== */
+(function loginParticles(){
+  const cv=document.getElementById('login-particles'),cx=cv.getContext('2d');
+  let ps=[],raf;
+  function size(){cv.width=innerWidth;cv.height=innerHeight}
+  size();addEventListener('resize',size);
+  const cols=['#7d9b5a','#9bc46a','#5f7a45','#c9d8a0','#4a5d3a'];
+  for(let i=0;i<70;i++)ps.push({x:Math.random()*cv.width,y:Math.random()*cv.height,
+    r:Math.random()*2.4+.6,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,c:cols[i%cols.length],a:Math.random()*.5+.2});
+  function loop(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    for(const p of ps){p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>cv.width)p.vx*=-1; if(p.y<0||p.y>cv.height)p.vy*=-1;
+      cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fillStyle=p.c;cx.globalAlpha=p.a;cx.fill();}
+    // connecting lines
+    cx.globalAlpha=.12;cx.strokeStyle='#9bc46a';
+    for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){
+      const dx=ps[i].x-ps[j].x,dy=ps[i].y-ps[j].y,d=Math.hypot(dx,dy);
+      if(d<120){cx.beginPath();cx.moveTo(ps[i].x,ps[i].y);cx.lineTo(ps[j].x,ps[j].y);cx.stroke();}}
+    cx.globalAlpha=1;raf=requestAnimationFrame(loop);
+  }
+  loop();
+  window._stopLoginParticles=()=>cancelAnimationFrame(raf);
+})();
+
+document.getElementById('login-form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const u=document.getElementById('user').value.trim().toLowerCase();
+  const p=document.getElementById('pass').value;
+  if(u==='isabela'&&p==='123'){ launchDashboard(); }
+  else{ const el=document.getElementById('login-err'); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1600); }
+});
+
+/* Burst de partículas coloridas na transição */
+function burstParticles(done){
+  const cv=document.getElementById('burst');cv.classList.remove('hidden');
+  const cx=cv.getContext('2d');cv.width=innerWidth;cv.height=innerHeight;
+  const cols=['#9bc46a','#7d9b5a','#c9d8a0','#5f7a45','#eaf3d4','#4a5d3a'];
+  const cxp=cv.width/2,cyp=cv.height/2;let parts=[];
+  for(let i=0;i<180;i++){const a=Math.random()*Math.PI*2,sp=Math.random()*11+3;
+    parts.push({x:cxp,y:cyp,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:Math.random()*4+2,c:cols[i%cols.length],life:1});}
+  let t=0;
+  (function anim(){
+    cx.clearRect(0,0,cv.width,cv.height);t++;
+    for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.vx*=.985;p.life-=.012;
+      if(p.life>0){cx.globalAlpha=Math.max(0,p.life);cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fillStyle=p.c;cx.fill();}}
+    cx.globalAlpha=1;
+    if(t<95)requestAnimationFrame(anim);else{cv.classList.add('hidden');done&&done();}
+  })();
+}
+
+function launchDashboard(){
+  const login=document.getElementById('login');
+  login.style.transition='opacity .5s';login.style.opacity='0';
+  window._stopLoginParticles&&window._stopLoginParticles();
+  burstParticles();
+  setTimeout(()=>{
+    login.classList.add('hidden');
+    const app=document.getElementById('app');app.classList.remove('hidden');
+    void app.offsetWidth; // reflow
+    requestAnimationFrame(()=>app.classList.add('reveal'));
+    initDashboard();
+  },520);
+}
+
+/* ===================== TEMA ===================== */
+const themeBtn=document.getElementById('theme-btn');
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);
+  themeBtn.textContent=t==='dark'?'🌙':'☀️';localStorage.setItem('cs-theme',t);}
+applyTheme(localStorage.getItem('cs-theme')||'dark');
+themeBtn.addEventListener('click',()=>{
+  const now=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  applyTheme(now);
+  if(window._dashReady){buildLegend();recolorMap();rebuildCharts();}
+});
+document.getElementById('logout-btn').addEventListener('click',()=>location.reload());
+
+/* ===================== PARSING / DATA ===================== */
+function parseCSV(txt){
+  const lines=txt.trim().split(/\r?\n/).slice(1);
+  return lines.map(l=>{const c=l.split(',');return {data:c[0].trim(),val:parseFloat(c[1])};});
+}
+async function loadSeries(file,embed){
+  try{
+    const r=await fetch(file,{cache:'no-store'});
+    if(!r.ok)throw 0;const t=await r.text();
+    if(!/\d/.test(t))throw 0;
+    return {rows:parseCSV(t),source:'arquivo'};
+  }catch(e){ return {rows:parseCSV(embed),source:'embutido'}; }
+}
+async function loadDaily(){
+  try{const r=await fetch('dolar_11_07.csv',{cache:'no-store'});if(!r.ok)throw 0;return (await r.text());}
+  catch(e){return EMBED.dolarDaily;}
+}
+
+/* ===================== ESTADO GLOBAL ===================== */
+const S={months:[],dolar:[],arroba:[],labels:[],range:[0,0],years:new Set(),lastUpdate:'—'};
+let corrChart,regChart,momChart;
+
+function mesLabel(d){const[dd,mm,yy]=d.split('/');return `${mm}/${yy}`;}
+function pearson(x,y){const n=x.length;let mx=0,my=0;for(let i=0;i<n;i++){mx+=x[i];my+=y[i];}mx/=n;my/=n;
+  let cov=0,sx=0,sy=0;for(let i=0;i<n;i++){cov+=(x[i]-mx)*(y[i]-my);sx+=(x[i]-mx)**2;sy+=(y[i]-my)**2;}
+  return cov/Math.sqrt(sx*sy);}
+function linreg(xs,ys){const n=xs.length;let sx=0,sy=0,sxy=0,sxx=0;
+  for(let i=0;i<n;i++){sx+=xs[i];sy+=ys[i];sxy+=xs[i]*ys[i];sxx+=xs[i]*xs[i];}
+  const b=(n*sxy-sx*sy)/(n*sxx-sx*sx),a=(sy-b*sx)/n;return {a,b};}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function fmtBRL(v){return 'R$ '+v.toFixed(2).replace('.',',');}
+
+/* ===================== INIT ===================== */
+async function initDashboard(){
+  const[a,d,daily]=await Promise.all([
+    loadSeries('cotacao_arroba.csv',EMBED.arroba),
+    loadSeries('dolar_historico.csv',EMBED.dolar),
+    loadDaily()
+  ]);
+  // align by month label
+  const dmap={};d.rows.forEach(r=>dmap[mesLabel(r.data)]=r.val);
+  S.months=a.rows.map(r=>mesLabel(r.data));
+  S.arroba=a.rows.map(r=>r.val);
+  S.dolar=a.rows.map(r=>dmap[mesLabel(r.data)]);
+  S.labels=S.months.slice();
+  S.range=[0,S.months.length-1];
+  // último update = maior data do diário
+  const dl=parseCSV(daily.replace(/Cotacao Compra.*/,'Cotacao'));
+  S.lastUpdate=dl.length?dl[dl.length-1].data:S.months[S.months.length-1];
+  document.getElementById('last-update').textContent=S.lastUpdate;
+
+  setupRange();setupYears();window._dashReady=true;
+  refreshAll();
+  drawMap();
+}
+
+/* ---- Range slider ---- */
+function setupRange(){
+  const mn=document.getElementById('r-min'),mx=document.getElementById('r-max'),N=S.months.length-1;
+  mn.min=mx.min=0;mn.max=mx.max=N;mn.value=0;mx.value=N;
+  function upd(){
+    let lo=+mn.value,hi=+mx.value;if(lo>hi){[lo,hi]=[hi,lo];}
+    S.range=[lo,hi];
+    document.getElementById('r-start').textContent=S.months[lo];
+    document.getElementById('r-end').textContent=S.months[hi];
+    const f=document.getElementById('track-fill');
+    f.style.left=(lo/N*100)+'%';f.style.right=(100-hi/N*100)+'%';f.style.width='auto';
+    if(window._dashReady)refreshInsights();
+  }
+  mn.oninput=mx.oninput=upd;upd();
+}
+/* ---- Year chips ---- */
+function setupYears(){
+  const ys=[...new Set(S.months.map(m=>m.split('/')[1]))];
+  S.years=new Set(ys);
+  const box=document.getElementById('year-chips');box.innerHTML='';
+  ys.forEach(y=>{const b=document.createElement('button');b.className='year-chip active';b.textContent=y;
+    b.onclick=()=>{b.classList.toggle('active');if(b.classList.contains('active'))S.years.add(y);else S.years.delete(y);
+      if(S.years.size===0){S.years.add(y);b.classList.add('active');}buildMoM();};
+    box.appendChild(b);});
+}
+
+function refreshAll(){refreshKPIs();refreshInsights();buildRanks();}
+function refreshInsights(){refreshKPIs();buildCorr();buildReg();buildMoM();}
+function rebuildCharts(){buildCorr();buildReg();buildMoM();}
+
+/* ---- KPIs ---- */
+function refreshKPIs(){
+  const n=S.arroba.length;
+  const aLast=S.arroba[n-1],aPrev=S.arroba[n-2],dLast=S.dolar[n-1],dPrev=S.dolar[n-2];
+  document.getElementById('kpi-arroba').innerHTML=fmtBRL(aLast)+' <small>/@</small>';
+  document.getElementById('kpi-dolar').innerHTML='R$ '+dLast.toFixed(3).replace('.',',');
+  const at=((aLast/aPrev-1)*100),dt=((dLast/dPrev-1)*100);
+  document.getElementById('kpi-arroba-t').innerHTML=trendHTML(at)+' vs mês anterior';
+  document.getElementById('kpi-dolar-t').innerHTML=trendHTML(dt)+' vs mês anterior';
+  const[lo,hi]=S.range;
+  const r=pearson(S.dolar.slice(lo,hi+1),S.arroba.slice(lo,hi+1));
+  document.getElementById('kpi-corr').textContent=r.toFixed(3).replace('.',',');
+  document.getElementById('kpi-corr-t').textContent=corrStrength(r);
+  document.getElementById('corr-val').textContent=r.toFixed(3).replace('.',',');
+  document.getElementById('corr-txt').textContent='('+corrStrength(r)+')';
+  // forecast next month via regression on selected range
+  const xs=[],ys=[];for(let i=lo;i<=hi;i++){xs.push(i);ys.push(S.arroba[i]);}
+  const {a,b}=linreg(xs,ys);const fc=a+b*(hi+1);
+  document.getElementById('kpi-fc').innerHTML=fmtBRL(fc)+' <small>/@</small>';
+  const fct=((fc/S.arroba[hi]-1)*100);
+  document.getElementById('kpi-fc-t').innerHTML=trendHTML(fct)+' proj. vs último';
+}
+function trendHTML(v){const cls=v>=0?'up':'down';const ar=v>=0?'▲':'▼';return `<span class="${cls}">${ar} ${Math.abs(v).toFixed(1).replace('.',',')}%</span>`;}
+function corrStrength(r){const a=Math.abs(r);return (r>=0?'positiva ':'negativa ')+(a>=.7?'forte':a>=.4?'moderada':'fraca');}
+
+/* ---- Correlation scatter ---- */
+function buildCorr(){
+  const[lo,hi]=S.range;const pts=[];for(let i=lo;i<=hi;i++)pts.push({x:S.dolar[i],y:S.arroba[i]});
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),{a,b}=linreg(xs,ys);
+  const xmin=Math.min(...xs),xmax=Math.max(...xs);
+  const line=[{x:xmin,y:a+b*xmin},{x:xmax,y:a+b*xmax}];
+  corrChart&&corrChart.destroy();
+  corrChart=new Chart(document.getElementById('corrChart'),{
+    data:{datasets:[
+      {type:'scatter',label:'Meses',data:pts,backgroundColor:css('--green-3'),pointRadius:5,pointHoverRadius:7},
+      {type:'line',label:'Tendência',data:line,borderColor:css('--accent'),borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false}
+    ]},
+    options:baseOpts({x:'Dólar (R$)',y:'Arroba (R$/@)'})
+  });
+}
+
+/* ---- Regression forecast ---- */
+function buildReg(){
+  const[lo,hi]=S.range;const xs=[],ys=[];for(let i=lo;i<=hi;i++){xs.push(i);ys.push(S.arroba[i]);}
+  const {a,b}=linreg(xs,ys);
+  const labels=S.months.slice(lo,hi+1);const hist=ys.slice();
+  const fc=[];const fcLabels=[];
+  const[Y,M]=S.months[hi].split('/').map(Number);let yy=M,yr=Y;
+  for(let k=1;k<=6;k++){yy++;if(yy>12){yy=1;yr++;}fcLabels.push(String(yy).padStart(2,'0')+'/'+yr);fc.push(a+b*(hi+k));}
+  const allLabels=labels.concat(fcLabels);
+  const histData=hist.concat(new Array(6).fill(null));
+  const trendData=xs.map(i=>a+b*i).concat(fc);
+  const fcData=new Array(hist.length-1).fill(null).concat([hist[hist.length-1]]).concat(fc);
+  regChart&&regChart.destroy();
+  regChart=new Chart(document.getElementById('regChart'),{
+    type:'line',
+    data:{labels:allLabels,datasets:[
+      {label:'Arroba (histórico)',data:histData,borderColor:css('--green-3'),backgroundColor:'transparent',borderWidth:2,tension:.25,pointRadius:2},
+      {label:'Tendência',data:trendData,borderColor:css('--accent'),borderWidth:1.5,borderDash:[4,4],pointRadius:0},
+      {label:'Previsão (6m)',data:fcData,borderColor:css('--green-glow'),backgroundColor:'rgba(155,196,106,.15)',borderWidth:2.5,borderDash:[8,4],pointRadius:3,fill:true}
+    ]},
+    options:baseOpts({x:'',y:'R$/@'},true)
+  });
+}
+
+/* ---- MoM composed ---- */
+function buildMoM(){
+  const idx=[];S.months.forEach((m,i)=>{if(S.years.has(m.split('/')[1]))idx.push(i);});
+  const labels=idx.map(i=>S.months[i]);
+  const vals=idx.map(i=>S.arroba[i]);
+  const mom=idx.map((i,k)=>k===0?null:( (S.arroba[i]/S.arroba[idx[k-1]]-1)*100 ));
+  momChart&&momChart.destroy();
+  momChart=new Chart(document.getElementById('momChart'),{
+    data:{labels,datasets:[
+      {type:'bar',label:'Arroba (R$/@)',data:vals,backgroundColor:css('--green-2'),borderRadius:5,yAxisID:'y'},
+      {type:'line',label:'Variação MoM (%)',data:mom,borderColor:css('--green-glow'),backgroundColor:css('--green-glow'),
+        borderWidth:2.5,tension:.3,pointRadius:3,yAxisID:'y1'}
+    ]},
+    options:{...baseOpts({x:'',y:'R$/@'}),
+      scales:{
+        x:{grid:{color:css('--grid')},ticks:{color:css('--text-dim'),maxRotation:60,minRotation:45}},
+        y:{position:'left',grid:{color:css('--grid')},ticks:{color:css('--text-dim')},title:{display:true,text:'Arroba (R$/@)',color:css('--text-dim')}},
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:css('--text-dim'),callback:v=>v+'%'},title:{display:true,text:'MoM %',color:css('--text-dim')}}
+      }}
+  });
+}
+
+function baseOpts(titles,noXtitle){
+  return {responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+    plugins:{legend:{labels:{color:css('--text-dim'),boxWidth:12,font:{size:11}}},
+      tooltip:{backgroundColor:css('--panel'),borderColor:css('--green-3'),borderWidth:1,titleColor:css('--accent'),bodyColor:css('--text')}},
+    scales:{
+      x:{grid:{color:css('--grid')},ticks:{color:css('--text-dim'),maxRotation:60,minRotation:0},title:{display:!!titles.x&&!noXtitle,text:titles.x,color:css('--text-dim')}},
+      y:{grid:{color:css('--grid')},ticks:{color:css('--text-dim')},title:{display:!!titles.y,text:titles.y,color:css('--text-dim')}}
+    }};
+}
+
+/* ---- Rankings top 3 ---- */
+function buildRanks(){
+  const arr=Object.entries(TRADE).map(([id,t])=>({id:+id,...t}));
+  const exp=[...arr].sort((a,b)=>b.exp-a.exp).slice(0,3);
+  const imp=[...arr].sort((a,b)=>b.imp-a.imp).slice(0,3);
+  const fill=(el,list,key)=>{el.innerHTML='';list.forEach((c,i)=>{
+    const val=key==='exp'?c.exp:c.imp;const usd=(val*PRICE[key]).toFixed(0);
+    el.insertAdjacentHTML('beforeend',
+      `<li><div class="pos">${i+1}</div><div class="flag">${c.flag}</div>
+       <div class="who">${c.name}<small>US$ ${(+usd).toLocaleString('pt-BR')} mi · ano</small></div>
+       <div class="vol">${val.toLocaleString('pt-BR')} <small>mil t</small></div></li>`);
+  });};
+  fill(document.getElementById('top-exp'),exp,'exp');
+  fill(document.getElementById('top-imp'),imp,'imp');
+}
+
+/* ===================== MAPA COROPLÉTICO (D3) ===================== */
+let mapState={metric:'exp',showFlow:true,features:null,centroids:{},projection:null,svg:null,path:null,color:null};
+const WORLD_URL='https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+
+async function drawMap(){
+  const status=document.getElementById('map-status');
+  if(typeof d3==='undefined'||typeof topojson==='undefined'){
+    status.classList.remove('hidden');status.textContent='⚠️ Biblioteca de mapa não carregada. Conecte-se à internet para visualizar o mapa mundial (o restante do dashboard funciona offline).';return;
+  }
+  try{
+    const world=await d3.json(WORLD_URL);
+    const countries=topojson.feature(world,world.objects.countries).features;
+    mapState.features=countries;
+    const wrap=document.getElementById('map-wrap');
+    const W=wrap.clientWidth,H=wrap.clientHeight;
+    const proj=d3.geoNaturalEarth1().fitSize([W,H*1.15],{type:'Sphere'}).translate([W/2,H/2]);
+    const path=d3.geoPath(proj);
+    mapState.projection=proj;mapState.path=path;
+    const svg=d3.select('#map').attr('viewBox',`0 0 ${W} ${H}`);svg.selectAll('*').remove();
+    mapState.svg=svg;
+    // ocean sphere
+    svg.append('path').attr('d',path({type:'Sphere'})).attr('fill','transparent');
+    const g=svg.append('g').attr('class','countries');
+    g.selectAll('path').data(countries).join('path')
+      .attr('class','country').attr('d',path)
+      .attr('data-id',d=>+d.id)
+      .on('mousemove',(e,d)=>showTip(e,d))
+      .on('mouseleave',hideTip);
+    // centroids
+    countries.forEach(c=>{if(TRADE[+c.id]){const p=proj(d3.geoCentroid(c));if(p&&isFinite(p[0]))mapState.centroids[+c.id]=p;}});
+    mapState.bubbleG=svg.append('g').attr('class','bubbles');
+    mapState.flowG=svg.append('g').attr('class','flows');
+    buildLegend();recolorMap();
+    setupMapControls();
+    status.classList.add('hidden');
+  }catch(e){
+    status.classList.remove('hidden');status.textContent='⚠️ Não foi possível carregar a geometria do mapa mundial (sem internet). O restante do dashboard funciona normalmente.';
+  }
+}
+function maxMetric(){return Math.max(...Object.values(TRADE).map(t=>t[mapState.metric]));}
+function buildLegend(){
+  const mx=maxMetric();
+  mapState.color=d3.scaleSequential().domain([0,mx])
+    .interpolator(d3.interpolateRgb(css('--map-empty'),css('--map-hi')));
+  document.getElementById('legend-title').textContent=(mapState.metric==='exp'?'Volume de exportação':'Volume de importação')+' (mil t)';
+  document.getElementById('leg-max').textContent=mx.toLocaleString('pt-BR');
+  document.getElementById('legend-grad').style.background=`linear-gradient(90deg,${css('--map-empty')},${css('--map-hi')})`;
+}
+function recolorMap(){
+  if(!mapState.svg)return;
+  buildLegend();
+  const c=mapState.color;
+  mapState.svg.selectAll('.country').transition().duration(500)
+    .attr('fill',d=>{const t=TRADE[+d.id];return t?c(t[mapState.metric]):css('--map-empty');});
+  drawBubbles();drawFlows();
+}
+function drawBubbles(){
+  const mx=maxMetric();const r=d3.scaleSqrt().domain([0,mx]).range([0,34]);
+  const data=Object.entries(mapState.centroids)
+    .map(([id,p])=>({id:+id,p,v:TRADE[+id][mapState.metric]})).filter(d=>d.v>0);
+  const sel=mapState.bubbleG.selectAll('circle').data(data,d=>d.id);
+  sel.exit().remove();
+  const ent=sel.enter().append('circle').attr('class','bubble')
+    .attr('cx',d=>d.p[0]).attr('cy',d=>d.p[1]).attr('r',0)
+    .attr('fill','rgba(155,196,106,.28)').attr('stroke',css('--green-glow')).attr('stroke-width',1);
+  ent.merge(sel).attr('cx',d=>d.p[0]).attr('cy',d=>d.p[1])
+    .transition().duration(900).ease(d3.easeElasticOut.amplitude(.6))
+    .attr('r',d=>r(d.v)).attr('fill','rgba(155,196,106,.22)').attr('stroke',css('--green-glow'));
+  // pulse
+  pulse();
+}
+let pulseRAF;
+function pulse(){
+  cancelAnimationFrame(pulseRAF);
+  const start=performance.now();
+  function step(t){
+    const k=1+0.10*Math.sin((t-start)/650);
+    mapState.bubbleG&&mapState.bubbleG.selectAll('circle').attr('transform',function(){
+      const cx=+d3.select(this).attr('cx'),cy=+d3.select(this).attr('cy');
+      return `translate(${cx*(1-k)},${cy*(1-k)}) scale(${k})`;});
+    pulseRAF=requestAnimationFrame(step);
+  }
+  pulseRAF=requestAnimationFrame(step);
+}
+function drawFlows(){
+  const g=mapState.flowG;g.selectAll('*').remove();
+  if(!mapState.showFlow){return;}
+  // maiores exportadores -> maiores importadores
+  const cen=mapState.centroids;
+  const exps=Object.entries(TRADE).filter(([id])=>cen[+id]).sort((a,b)=>b[1].exp-a[1].exp).slice(0,3).map(([id])=>+id);
+  const imps=Object.entries(TRADE).filter(([id])=>cen[+id]).sort((a,b)=>b[1].imp-a[1].imp).slice(0,4).map(([id])=>+id);
+  const lines=[];
+  exps.forEach(e=>imps.forEach(im=>{if(e!==im&&cen[e]&&cen[im])lines.push([cen[e],cen[im]]);}));
+  lines.forEach((ln,i)=>{
+    const[a,b]=ln;const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2-Math.abs(b[0]-a[0])*.22;
+    const d=`M${a[0]},${a[1]} Q${mx},${my} ${b[0]},${b[1]}`;
+    const p=g.append('path').attr('class','flow').attr('d',d);
+    const len=p.node().getTotalLength();
+    p.attr('stroke-dasharray',len).attr('stroke-dashoffset',len)
+      .transition().delay(i*80).duration(1100).ease(d3.easeCubicOut).attr('stroke-dashoffset',0)
+      .on('end',function(){d3.select(this).attr('stroke-dasharray','5 7');animateDash(d3.select(this));});
+  });
+}
+function animateDash(sel){
+  let off=0;const node=sel.node();if(!node)return;
+  function loop(){off-=.5;sel.attr('stroke-dashoffset',off);sel._raf=requestAnimationFrame(loop);}
+  loop();
+}
+function setupMapControls(){
+  document.querySelectorAll('#metric-seg button').forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll('#metric-seg button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');mapState.metric=b.dataset.metric;recolorMap();};
+  });
+  const fb=document.getElementById('flow-btn');
+  fb.onclick=()=>{mapState.showFlow=!mapState.showFlow;fb.classList.toggle('active',mapState.showFlow);drawFlows();};
+}
+/* Tooltip */
+const tip=document.getElementById('tooltip');
+function showTip(e,d){
+  const t=TRADE[+d.id];
+  const name=t?t.name:(d.properties&&d.properties.name)||'—';
+  const flag=t?t.flag:'🌐';
+  if(!t){tip.innerHTML=`<h4>${flag} ${name}</h4><div class="row"><span>Sem dados de comércio</span></div>`;}
+  else{
+    const net=t.exp-t.imp;
+    tip.innerHTML=`<h4>${flag} ${name}</h4>
+      <div class="row"><span>Exportação</span><span>${t.exp.toLocaleString('pt-BR')} mil t</span></div>
+      <div class="row"><span>US$ (exp.)</span><span>${(t.exp*PRICE.exp).toLocaleString('pt-BR',{maximumFractionDigits:0})} mi</span></div>
+      <div class="row"><span>Importação</span><span>${t.imp.toLocaleString('pt-BR')} mil t</span></div>
+      <div class="row"><span>US$ (imp.)</span><span>${(t.imp*PRICE.imp).toLocaleString('pt-BR',{maximumFractionDigits:0})} mi</span></div>
+      <div class="row net"><span>Saldo líquido</span><span style="color:${net>=0?'#7fbf6a':'#e08a6a'}">${net>=0?'+':''}${net.toLocaleString('pt-BR')} mil t</span></div>`;
+  }
+  tip.style.opacity='1';
+  let x=e.clientX+16,y=e.clientY+16;
+  if(x+220>innerWidth)x=e.clientX-220;if(y+160>innerHeight)y=e.clientY-160;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+function hideTip(){tip.style.opacity='0';}
+addEventListener('resize',()=>{if(mapState.features){document.getElementById('map').innerHTML='';drawMap();}});
+</script>
 </body>
 </html>
